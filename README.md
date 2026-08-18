@@ -1,65 +1,152 @@
-# Spidey-Pusher
-# 🕷️ Spidey Pusher
+# Spidey Push Guard 🕷️
 
-A borderless, always-on-top desktop overlay that reminds you to push your code to GitHub every day at 5:00 PM — Spider-Man-style.
+A small Windows accountability tool that drops a transparent, always-on-top Spider-Man-style reminder onto your desktop and asks one question: **did you push your code to GitHub?**
 
-Spider-Man descends from the top of your screen on a web line, lands, and a spider-web text panel asks:
+The included PowerShell installer can register the reminder with Windows Task Scheduler so it appears every day at **5:00 PM**. Press **YES** to dismiss it for the day, or **NO** to snooze it for five minutes and let it come back.
 
-> **DID YOU PUSH YOUR CODES IN YOUR GITHUB REPO?**
-
-You answer with **YES** or **NO**.
+> This project is a reminder, not a GitHub client. It does not inspect your repositories, verify commits, push code, track contribution streaks, or know whether you have been hired.
 
 ## What it does
 
-- **Transparent overlay** — no window chrome, no background panel. Only Spider-Man and the text are visible; your desktop shows through everywhere else.
-- **Descends from the top of your screen** — the window is anchored to the very top edge, so it looks like he's genuinely swinging in from above, not popping up in the middle of the screen.
-- **Spider-web styled text** — the reminder is framed in hand-drawn web strands instead of a plain box.
-- **YES** → closes the app immediately. You're done for the day.
-- **NO** → hides the window and snoozes for 5 minutes, then brings Spider-Man back down to ask again. Repeats until you click YES.
-- **Runs on a schedule** — a Task Scheduler entry triggers it daily at 5:00 PM, and catches up automatically if your laptop was asleep at that time.
+- Creates a borderless Tkinter desktop overlay.
+- Keeps the overlay above other windows.
+- Uses Windows' transparent-color support so only the image, web graphics, text, and buttons are visible.
+- Animates the bundled image down from the top of the screen over roughly three seconds.
+- Draws a simple spider-web pattern behind the reminder text.
+- Shows **YES** and **NO** controls.
+- **YES** exits the reminder.
+- **NO** hides it for five minutes, then rebuilds and replays the reminder.
+- **Esc** behaves like **YES** and closes the reminder.
+- Includes a PowerShell script that registers a daily Windows Scheduled Task.
 
-## Files
+## How the scheduled reminder works
 
-| File | Purpose |
-|---|---|
-| `spidey_pusher.py` | The Tkinter app itself |
-| `image_0.png` | Transparent Spider-Man graphic used by the app |
-| `requirements.txt` | Python dependencies (Pillow) |
-| `setup_push_scheduler.ps1` | Registers the daily 5 PM Windows Task Scheduler job |
+`setup_push_scheduler.ps1` creates a task named:
+
+```text
+Github_Push_Guard_Spidey
+```
+
+The task is configured to:
+
+- run every day at **5:00 PM**;
+- start when available after a missed scheduled time;
+- run on battery power;
+- run only as the current interactive user so the GUI is visible;
+- ignore a new launch if another instance is already running.
+
+The scheduled action uses the Python interpreter found on your `PATH` and launches `spidey_pusher.py` from the project directory.
+
+## Project structure
+
+```text
+spidey-push-guard/
+├── image_0.png
+├── requirements.txt
+├── setup_push_scheduler.ps1
+└── spidey_pusher.py
+```
 
 ## Requirements
 
-- Windows (the transparent-overlay effect relies on a Windows-only Tkinter attribute)
-- Python 3.8+
-- [Pillow](https://pypi.org/project/Pillow/)
+- Windows 10/11 recommended
+- Python 3
+- Tkinter (normally included with the standard Windows Python installer)
+- Pillow
+
+The transparent desktop effect relies on Tkinter's Windows-only `-transparentcolor` attribute. On other operating systems, the Python script falls back to an opaque dark background.
 
 ## Setup
 
-1. Clone or download this repo into a folder, e.g. `C:\Users\you\spidey`.
-2. Install dependencies:
-   ```powershell
-   cd C:\Users\you\spidey
-   python -m pip install -r requirements.txt
-   ```
-3. Test it manually:
-   ```powershell
-   python spidey_pusher.py
-   ```
-4. (Optional) Schedule it to run automatically every day at 5:00 PM:
-   - Open PowerShell **as Administrator**
-   - Navigate to the project folder
-   - Allow the script to run once: `Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass`
-   - Run: `.\setup_push_scheduler.ps1`
-
-This registers a scheduled task named **`Github_Push_Guard_Spidey`** that runs daily at 5:00 PM, runs on battery power too, and fires as soon as possible if the computer was asleep at the scheduled time.
-
-## Uninstalling the scheduled task
+Clone or download the project, open PowerShell in the project directory, and install the Python dependency:
 
 ```powershell
-Unregister-ScheduledTask -TaskName "Github_Push_Guard_Spidey" -Confirm:$false
+python -m pip install -r requirements.txt
 ```
 
-## Notes
+Then test the reminder manually:
 
-- Press `Esc` at any time to close the app (same as clicking YES).
-- The app writes a short warning to the console (not a popup) if `image_0.png` is missing or Pillow isn't installed, and falls back to a simple placeholder shape so it still runs.
+```powershell
+python .\spidey_pusher.py
+```
+
+You should see the image descend from the top of the screen, followed by the GitHub reminder and the **YES / NO** buttons.
+
+## Install the 5 PM Windows task
+
+The provided installer intentionally requires an elevated PowerShell window.
+
+1. Open **PowerShell as Administrator**.
+2. Change into the project directory.
+3. Run:
+
+```powershell
+.\setup_push_scheduler.ps1
+```
+
+If PowerShell blocks script execution for the current process, you can temporarily allow it with:
+
+```powershell
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+```
+
+Then run the setup script again.
+
+## Controls
+
+| Action | Result |
+|---|---|
+| **YES** | Closes the reminder process for that run |
+| **NO** | Hides the window and brings it back after 5 minutes |
+| **Esc** | Same behavior as **YES** |
+
+## Customization
+
+The main settings are near the top of `spidey_pusher.py`:
+
+```python
+SPIDEY_MAX_WIDTH = 260
+DESCEND_DURATION_MS = 3000
+DESCEND_FPS = 60
+SNOOZE_MS = 5 * 60 * 1000
+DIALOGUE_LINES = [
+    "DID YOU PUSH YOUR CODES",
+    "IN YOUR GITHUB REPO?",
+]
+```
+
+Change these values to adjust the animation, snooze duration, image size, or reminder copy.
+
+The scheduled time is set separately in `setup_push_scheduler.ps1`:
+
+```powershell
+$Trigger = New-ScheduledTaskTrigger -Daily -At 5:00PM
+```
+
+## Stopping the reminder permanently
+
+There is currently no uninstall script in the project. When you no longer want the daily reminder, remove or disable the `Github_Push_Guard_Spidey` task in **Windows Task Scheduler**.
+
+This is also the manual step you would take once the reminder has done its job—for example, when you no longer want the internship-search accountability routine.
+
+## Current limitations
+
+- It does not connect to the GitHub API.
+- It cannot tell whether you actually committed or pushed anything.
+- It cannot determine whether you have been hired.
+- The reminder time is hard-coded to 5:00 PM in the PowerShell setup script.
+- The task launches `python.exe`, so a console window may also appear depending on your Windows/Python setup.
+- The app uses a fixed 640 px window width, so very small displays may not lay out perfectly.
+- Missing Pillow or a missing/broken `image_0.png` causes the app to fall back to a simple placeholder graphic.
+
+## Why this exists
+
+Job searching can turn "I should keep building" into something easy to postpone. This project turns that intention into a small daily interruption: ship something, push your work, then dismiss the reminder.
+
+It is deliberately simple. The tool does not automate the work or fake activity—it only nudges you to do the work yourself.
+
+## Media and licensing note
+
+This repository currently contains a Spider-Man image asset and does not include a license file. Before publishing or distributing the repository, make sure you have permission to redistribute every bundled media asset. If necessary, replace the image with artwork you created yourself or an asset whose license allows redistribution.
+
+The source code also has no explicit software license in the supplied project. Add one only after deciding how you want others to be allowed to use your code.
